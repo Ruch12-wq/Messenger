@@ -1,0 +1,7 @@
+========================
+    Telegraph
+========================
+
+Create .env by the template:
+MONGO_URI=mongodb+srv://db_user:<db_password>@cluster0.yrvnmxo.mongodb.net/?appName=Cluster0
+MONGO_DB=
