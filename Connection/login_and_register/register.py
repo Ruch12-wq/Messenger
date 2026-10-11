@@ -1,8 +1,10 @@
+import base64
 from dotenv import load_dotenv
 import os
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import bcrypt
+from connection.message_comm.key_generator import GenerateKey
 
 class UserLoginRegister:
     def __init__(self):
@@ -22,6 +24,7 @@ class UserLoginRegister:
         self.mongo_db = self._required_env("MONGO_DB")
         collection_name = self._required_env("MONGO_COLLECTION_USERS")
         self.mongo_collection = self.client[self.mongo_db][collection_name]
+        self.key_generator = GenerateKey()
 
     @staticmethod
     def _required_env(name: str) -> str:
@@ -35,9 +38,13 @@ class UserLoginRegister:
         if user_exists:
             return [f"User '{username}' already exists", False]
 
+        self.key_generator.save_private_key(password, username)
+        public_key = base64.b64encode(bytes(self.key_generator.public_key)).decode('ascii')
+
         user_data = {
             "username": username,
-            "password": bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')   
+            "password": bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+            "public_key": public_key
         }
 
         self.mongo_collection.insert_one(user_data)

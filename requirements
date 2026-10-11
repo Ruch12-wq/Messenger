@@ -2,3 +2,4 @@ dotenv
 pymongo
 Pillow
 bcrypt
+pynacl
