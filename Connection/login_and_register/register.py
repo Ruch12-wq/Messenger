@@ -4,7 +4,7 @@ import os
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 import bcrypt
-from connection.message_comm.key_generator import GenerateKey
+from Connection.message_comm.key_generator import GenerateKey
 
 class UserLoginRegister:
     def __init__(self):
