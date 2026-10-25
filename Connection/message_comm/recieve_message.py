@@ -31,9 +31,23 @@ class SendMessage:
             raise RuntimeError(f"Missing required environment variable: {name}")
         return value
 
-    def ping_messages(self, sender, recipient):
+    def ping_messages_at_startup(self, sender, user):
         sender_data = self.client[self.mongo_db][self._required_env("MONGO_COLLECTION_USERS")].find_one({"username": sender})
         if not sender_data:
             return [f"Sender '{sender}' does not exist", False]
 
-        messages_ping = self.mongo
+        messages_ping_user = self.mongo_collection.find({"sender": sender, "recipient": user})
+        messages_ping_recipient = self.mongo_collection.find({"sender": user, "recipient": sender})
+
+        if not messages_ping_user or not messages_ping_recipient:
+            return [f"No messages found from '{sender}' to '{user}' or vice versa", False]
+        
+        return [list(messages_ping_user), list(messages_ping_recipient), True]
+
+    def ping_messages(self, sender, user):
+        sender_data = self.client[self.mongo_db][self._required_env("MONGO_COLLECTION_USERS")].find_one({"username": sender})
+        if not sender_data:
+            return [f"Sender '{sender}' does not exist", False]
+
+        
+        
