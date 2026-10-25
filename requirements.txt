@@ -3,3 +3,4 @@ pymongo
 Pillow
 bcrypt
 PyNaCl
+websockets>=13

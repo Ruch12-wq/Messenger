@@ -1,0 +1,4 @@
+websockets>=13
+pynacl>=1.5
+pymongo>=4.13
+python-dotenv>=1.0

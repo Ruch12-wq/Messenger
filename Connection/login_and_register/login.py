@@ -1,41 +1,22 @@
-from dotenv import load_dotenv
-import os
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-import bcrypt
+from Connection.server_client import MessengerServerClient
+from Connection.login_and_register.key_generator import GenerateKey
 
 class UserLogin:
-    def __init__(self):
-        load_dotenv()
-        self.mongo_uri = self._required_env("MONGO_URI")
-        self.client = MongoClient(self.mongo_uri, server_api=ServerApi('1'))
-
-        try:
-            self.client.admin.command('ping')
-            print("Pinged your deployment. You successfully connected to MongoDB!")
-        except Exception as exc:
-            raise ConnectionError(
-                "Could not authenticate with MongoDB Atlas. Check MONGO_URI, "
-                "the Atlas database user, and Network Access settings."
-            ) from exc
-
-        self.mongo_db = self._required_env("MONGO_DB")
-        collection_name = self._required_env("MONGO_COLLECTION_USERS")
-        self.mongo_collection = self.client[self.mongo_db][collection_name]
-
-    @staticmethod
-    def _required_env(name: str) -> str:
-        value = os.getenv(name)
-        if not value:
-            raise RuntimeError(f"Missing required environment variable: {name}")
-        return value
+    def __init__(self, server_client=None):
+        self.server_client = server_client or MessengerServerClient()
+        self.username = None
+        self.private_key = None
     
     def login_user(self, username, password):
-        user = self.mongo_collection.find_one({"username": username})
-        if not user:
-            return [f"User '{username}' does not exist", False]
+        response = self.server_client.login(username, password)
+        if response.get("type") != "ok":
+            return [response.get("message", "User login failed."), False]
 
-        if bcrypt.checkpw(password.encode("utf-8"), user["password"].encode("utf-8")):
-            return ["User login successful", True]
-        else:
-            return ["User password incorrect", False]
+        self.username = response["user"]
+        try:
+            self.private_key = GenerateKey.load_private_key(password, self.username)
+        except (OSError, ValueError):
+            # Authentication may still succeed on a different device; receiving
+            # encrypted messages requires importing that device's private key.
+            self.private_key = None
+        return ["User login successful", True]
