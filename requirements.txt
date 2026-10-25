@@ -1,6 +1,6 @@
-dotenv
+python-dotenv
 pymongo
 Pillow
 bcrypt
-pynacl
-datetime
+PyNaCl
+websockets>=13

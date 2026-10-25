@@ -1,39 +1,35 @@
-from dotenv import load_dotenv
-import os
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-from nacl.public import Box
+"""Receiving and decrypting messages delivered by the messenger server."""
+import base64
 
-class SendMessage:
-    def __init__(self):
-        load_dotenv()
-        self.mongo_uri = self._required_env("MONGO_URI")
-        self.client = MongoClient(self.mongo_uri, server_api=ServerApi('1'))
+from nacl.public import Box, PublicKey
+from nacl.exceptions import CryptoError
 
+from Connection.server_client import MessengerServerClient
+
+class ReceiveMessage:
+    def __init__(self, server_client=None):
+        self.server_client = server_client or MessengerServerClient()
+
+    def next_message(self, recipient_private_key, timeout=None):
+        """Return ``[sender, plaintext, True]`` or a failed result/``None`` on timeout."""
+        payload = self.server_client.receive_message(timeout)
+        if payload is None:
+            return None
         try:
-            self.client.admin.command('ping')
-            print("Pinged your deployment. You successfully connected to MongoDB!")
-        except Exception as exc:
-            raise ConnectionError(
-                "Could not authenticate with MongoDB Atlas. Check MONGO_URI, "
-                "the Atlas database user, and Network Access settings."
-            ) from exc
+            sender_response = self.server_client.public_key_for(payload["from"])
+            if sender_response.get("type") == "error":
+                return [sender_response["message"], False]
+            sender_key = PublicKey(base64.b64decode(sender_response["public_key"], validate=True))
+            plaintext = Box(recipient_private_key, sender_key).decrypt(
+                base64.b64decode(payload["ciphertext"], validate=True)
+            ).decode("utf-8")
+            return [payload["from"], plaintext, True]
+        except (CryptoError, KeyError, TypeError, ValueError, UnicodeDecodeError):
+            return ["Could not decrypt the received message.", False]
 
-        self.mongo_db = self._required_env("MONGO_DB")
-        collection_name = self._required_env("MONGO_COLLECTION_MESSAGES")
-        self.mongo_collection = self.client[self.mongo_db][collection_name]
 
+# Preserve the misspelled module's former public class name for existing imports.
+SendMessage = ReceiveMessage
 
-    @staticmethod
-    def _required_env(name: str) -> str:
-        value = os.getenv(name)
-        if not value:
-            raise RuntimeError(f"Missing required environment variable: {name}")
-        return value
-
-    def ping_messages(self, sender, recipient):
-        sender_data = self.client[self.mongo_db][self._required_env("MONGO_COLLECTION_USERS")].find_one({"username": sender})
-        if not sender_data:
-            return [f"Sender '{sender}' does not exist", False]
-
-        messages_ping = self.mongo
+        
+        
