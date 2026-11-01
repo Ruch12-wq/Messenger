@@ -3,9 +3,9 @@ from pathlib import Path
 from tkinter import Tk, Toplevel
 from tkinter import ttk
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from Connection.login_and_register.login import UserLogin
+from frontend.Connection.login_and_register.login import UserLogin
 
 class LoginInterface:
     def __init__(self):

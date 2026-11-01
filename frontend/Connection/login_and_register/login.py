@@ -1,5 +1,5 @@
-from Connection.server_client import MessengerServerClient
-from Connection.login_and_register.key_generator import GenerateKey
+from frontend.Connection.server_client import MessengerServerClient
+from frontend.Connection.login_and_register.key_generator import GenerateKey
 
 class UserLogin:
     def __init__(self, server_client=None):

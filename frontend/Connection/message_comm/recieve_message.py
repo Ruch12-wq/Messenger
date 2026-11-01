@@ -4,7 +4,7 @@ import base64
 from nacl.public import Box, PublicKey
 from nacl.exceptions import CryptoError
 
-from Connection.server_client import MessengerServerClient
+from frontend.Connection.server_client import MessengerServerClient
 
 class ReceiveMessage:
     def __init__(self, server_client=None):

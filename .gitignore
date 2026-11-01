@@ -1,1 +1,7 @@
 .env
+.venv/
+__pycache__/
+*.py[cod]
+*.key
+server_data.json
+server_data.json.tmp

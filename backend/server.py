@@ -154,7 +154,13 @@ class MongoStore:
 # --------------------------------------------------------------------------
 def hash_secret(secret, salt):
     """Slow, salted hash (scrypt) so a stolen database can't be cheaply cracked."""
-    return hashlib.scrypt(secret.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+    if hasattr(hashlib, "scrypt"):
+        return hashlib.scrypt(secret.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+    # Some system Python builds lack OpenSSL scrypt; libsodium uses the same KDF.
+    from nacl.bindings import crypto_pwhash_scryptsalsa208sha256_ll
+    return crypto_pwhash_scryptsalsa208sha256_ll(
+        secret.encode(), salt, 2**14, 8, 1, dklen=32,
+    )
 
 
 def valid_public_key(text):

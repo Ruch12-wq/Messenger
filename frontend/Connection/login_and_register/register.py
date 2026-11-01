@@ -1,6 +1,6 @@
 import base64
-from Connection.login_and_register.key_generator import GenerateKey
-from Connection.server_client import MessengerServerClient
+from frontend.Connection.login_and_register.key_generator import GenerateKey
+from frontend.Connection.server_client import MessengerServerClient
 
 class UserLoginRegister:
     def __init__(self, server_client=None):

@@ -3,7 +3,7 @@ import base64
 
 from nacl.public import Box, PublicKey
 
-from Connection.server_client import MessengerServerClient
+from frontend.Connection.server_client import MessengerServerClient
 
 class SendMessage:
     def __init__(self, server_client=None):
