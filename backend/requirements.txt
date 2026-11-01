@@ -1,4 +1,8 @@
 websockets>=13
 pynacl>=1.5
+# Required to resolve mongodb+srv:// Atlas connection strings.
 pymongo>=4.13
+dnspython>=2.6.1
+# Use an up-to-date CA bundle when connecting to MongoDB Atlas over TLS.
+certifi>=2024.2.2
 python-dotenv>=1.0

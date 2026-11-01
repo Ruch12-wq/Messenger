@@ -13,6 +13,7 @@ Run:  python server.py
 """
 import asyncio
 import base64
+import certifi
 import hashlib
 import hmac
 import json
@@ -105,7 +106,12 @@ class MongoStore:
 
     def __init__(self, uri, db_name, users_collection, messages_collection):
         from pymongo import AsyncMongoClient   # needs pymongo >= 4.13
-        self.client = AsyncMongoClient(uri, serverSelectionTimeoutMS=8000)
+        options = {"serverSelectionTimeoutMS": 8000}
+        # Atlas SRV connection strings always use TLS. Providing certifi's
+        # maintained CA bundle avoids relying on a stale OS certificate store.
+        if uri.lower().startswith("mongodb+srv://"):
+            options["tlsCAFile"] = certifi.where()
+        self.client = AsyncMongoClient(uri, **options)
         db = self.client[db_name]
         self.users = db[users_collection]
         self.messages = db[messages_collection]
@@ -333,6 +339,7 @@ async def main():
                 "  1. the connection string was copied from Atlas > Connect > Drivers\n"
                 "  2. the password in it is correct (special characters must be URL-encoded)\n"
                 "  3. your CURRENT public IP address is in Atlas > Network Access\n"
+                "  4. the cluster is active and no VPN, proxy, or antivirus is intercepting TLS traffic\n"
                 "To test without a database, unset MONGO_URI and the server uses a local file."
             )
         log(f"storage: MongoDB (database '{MONGO_DB}')")
