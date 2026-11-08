@@ -49,6 +49,11 @@ class MessengerServerClient:
         try:
             raw = self._socket.recv(timeout=timeout)
             return json.loads(raw)
+        except TimeoutError:
+            # A zero-timeout UI poll simply means no message has arrived yet.
+            # TimeoutError is an OSError subclass, so handle it before the
+            # connection-error branch below.
+            raise
         except (ConnectionClosed, OSError, json.JSONDecodeError) as exc:
             self.close()
             raise ServerConnectionError("The messenger server connection was closed.") from exc
