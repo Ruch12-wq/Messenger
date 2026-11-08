@@ -1,17 +1,18 @@
 import sys
 from pathlib import Path
-from tkinter import Tk, Toplevel
+from tkinter import Tk
 from tkinter import ttk
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from frontend.Connection.login_and_register.login import UserLogin
+from frontend.interface.RegisterInterface import RegisterInterface
 
 class LoginInterface:
     def __init__(self):
         self.root = Tk()
         self.root.title("Log in")
-        self.root.geometry("420x320")
+        self.root.geometry("420x380")
         self.root.resizable(False, False)
 
         form = ttk.Frame(self.root, padding=32)
@@ -30,24 +31,25 @@ class LoginInterface:
         self.status = ttk.Label(form, text="")
         self.status.pack(pady=(12, 0))
         self.login = None
-
-
-        ttk.Button(form, text="Register", command=self.open_register_window).pack(anchor="w")
-        self.status = ttk.Label(form, text="")
-        self.status.pack(pady=(12, 0))
-        self.login = None
-
-        ttk.Button(form, text="Register", command=self.open_register_window, width=18, padding=(1,68)).pack(anchor="w")
-        self.status = ttk.Label(form,text="")
-        self.status.pack(pady=(1, 0))
-      
-
+        self.register_window = None
+        ttk.Button(
+            form,
+            text="Register",
+            command=self.open_register_window,
+            padding=(0, 8),
+        ).pack(
+            anchor="w", pady=(8, 0)
+        )
 
     def open_register_window(self):
-        self.register_window = Toplevel(self.root)
-        self.register_window.title("Register")
-        self.register_window.geometry("420x320")
-        self.register_window.resizable(False, False)
+        if self.register_window is not None and self.register_window.window.winfo_exists():
+            self.register_window.window.focus_set()
+            return
+        self.register_window = RegisterInterface(self.root, self._registration_finished)
+
+    def _registration_finished(self, message):
+        self.status.configure(text=message)
+        self.register_window = None
 
     def log_in(self):
         username = self.username_entry.get().strip()
@@ -67,27 +69,11 @@ class LoginInterface:
 
         if usercheck[1]:
             self.status.configure(text=f"Successfully logged in as '{username}'")
+            from frontend.interface.intterface import MessengerInterface
+
+            MessengerInterface(self.root, self.login)
         else:
             self.status.configure(text=usercheck[0])
-
-
-
-
-        
-# class RegisterInterface:
-#     def __init__(self):
-#         self.root = Tk()
-#         self.root.title("Register")
-#         self.root.geometry("420x320")
-#         self.root.resizable(False, False)
-
-#         form = ttk.Frame(self.root, padding=32)
-#         form.pack(expand=True, fill="both")
-
-#         ttk.Button(form, text="Register", command=self.open_register_interface).pack(anchor="e", pady=(12, 0))
-#         self.status = ttk.Label(form, text="")
-#         self.status.pack(pady=(12, 0)) 
-#         self.register_interface = None
 
 
 

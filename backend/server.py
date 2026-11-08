@@ -20,7 +20,6 @@ import json
 import os
 import re
 import secrets
-import sys
 import time
 
 import websockets
@@ -331,19 +330,18 @@ async def main():
             )
             await store.init()
         except ImportError:
-            sys.exit("MongoDB mode needs a recent pymongo:  pip install -U \"pymongo>=4.13\"")
+            log("MongoDB mode needs a recent pymongo; using local file storage instead.")
+            store = None
         except Exception as e:
-            sys.exit(
-                f"Could not connect to MongoDB: {e}\n\n"
-                "Check that:\n"
-                "  1. the connection string was copied from Atlas > Connect > Drivers\n"
-                "  2. the password in it is correct (special characters must be URL-encoded)\n"
-                "  3. your CURRENT public IP address is in Atlas > Network Access\n"
-                "  4. the cluster is active and no VPN, proxy, or antivirus is intercepting TLS traffic\n"
-                "To test without a database, unset MONGO_URI and the server uses a local file."
+            log(
+                f"Could not connect to MongoDB ({e}); using local file storage instead. "
+                "Check MONGO_URI to restore MongoDB storage."
             )
-        log(f"storage: MongoDB (database '{MONGO_DB}')")
-    else:
+            store = None
+        else:
+            log(f"storage: MongoDB (database '{MONGO_DB}')")
+
+    if store is None:
         store = FileStore(DATA_FILE)
         log(f"storage: local file '{DATA_FILE}' (set MONGO_URI to use MongoDB)")
 

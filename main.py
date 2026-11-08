@@ -13,6 +13,13 @@ ENV = ROOT / ".venv"
 PYTHON = ENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
+def configure_console_encoding():
+    """Allow Ukrainian status messages to work in older Windows consoles."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def prepare(component):
     if not PYTHON.exists():
         print("Створення віртуального середовища…", flush=True)
@@ -59,6 +66,7 @@ def wait_for_backend(process):
 
 
 def main():
+    configure_console_encoding()
     parser = argparse.ArgumentParser(description="Messenger: автоматичне встановлення бібліотек і запуск")
     parser.add_argument("component", nargs="?", choices=("all", "frontend", "backend"), default="all")
     parser.add_argument("--install-only", action="store_true", help="лише встановити залежності")
