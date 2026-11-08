@@ -42,6 +42,34 @@ def stop(process):
             process.wait()
 
 
+def frontend_environment():
+    """Return an environment that lets a venv-based Tkinter find Tcl/Tk.
+
+    Some Windows Python installations do not pass their Tcl/Tk library paths
+    through to virtual environments.  Tkinter then fails at startup even when
+    Tcl/Tk is installed alongside the base interpreter.
+    """
+    env = os.environ.copy()
+    if os.name != "nt":
+        return env
+
+    base = Path(sys.base_prefix)
+    config = ENV / "pyvenv.cfg"
+    if config.is_file():
+        for line in config.read_text(encoding="utf-8").splitlines():
+            key, separator, value = line.partition("=")
+            if separator and key.strip().lower() == "home":
+                base = Path(value.strip())
+                break
+    tcl = base / "tcl"
+    tcl_library = tcl / "tcl8.6"
+    tk_library = tcl / "tk8.6"
+    if tcl_library.is_dir() and tk_library.is_dir():
+        env["TCL_LIBRARY"] = str(tcl_library)
+        env["TK_LIBRARY"] = str(tk_library)
+    return env
+
+
 def wait_for_backend(process):
     # Read the same .env and defaults as the backend, using its environment.
     config = subprocess.check_output(
@@ -82,7 +110,11 @@ def main():
             if args.component == "backend":
                 return server.wait()
             wait_for_backend(server)
-        client = subprocess.Popen([str(PYTHON), "-m", "frontend.main"], cwd=ROOT)
+        client = subprocess.Popen(
+            [str(PYTHON), "-m", "frontend.main"],
+            cwd=ROOT,
+            env=frontend_environment(),
+        )
         processes.append(client)
         while client.poll() is None:
             if args.component == "all" and server.poll() is not None:
