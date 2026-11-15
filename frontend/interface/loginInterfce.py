@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from frontend.Connection.login_and_register.login import UserLogin
 from frontend.interface.RegisterInterface import RegisterInterface
+from frontend.interface.colors import Colors
 
 class LoginInterface:
     def __init__(self):
