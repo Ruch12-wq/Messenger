@@ -115,6 +115,15 @@ def main():
         prepare(args.component)
         if args.install_only:
             return 0
+        if args.component == "all":
+            mode = subprocess.check_output(
+                [str(PYTHON), "-c", "from dotenv import load_dotenv; import os; "
+                 "load_dotenv('.env'); print('mongo' if (os.getenv('MONGO_URI') or "
+                 "os.getenv('MONGODB_URI')) and os.getenv('MESSENGER_TRANSPORT') != 'websocket' else 'websocket')"],
+                cwd=ROOT, text=True,
+            ).strip()
+            if mode == "mongo":
+                args.component = "frontend"
         if args.component in ("all", "backend"):
             server = subprocess.Popen([str(PYTHON), "-m", "backend.server"], cwd=ROOT)
             processes.append(server)

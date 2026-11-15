@@ -21,7 +21,7 @@ class LoginInterface:
         form.pack(expand=True, fill="both")
 
         ttk.Label(form, text="Log in", font=("Arial", 20, "bold")).pack(pady=(8, 24))
-        ttk.Label(form, text="Server (ws://IP:8765 or wss://domain)").pack(anchor="w")
+        ttk.Label(form, text="Connection (mongodb uses MONGO_URI from .env)").pack(anchor="w")
         self.server_entry = ttk.Entry(form)
         self.server_entry.insert(0, MessengerServerClient().url)
         self.server_entry.pack(fill="x", pady=(4, 14))

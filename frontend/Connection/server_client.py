@@ -23,6 +23,14 @@ class ServerConnectionError(ConnectionError):
 
 
 class MessengerServerClient:
+    def __new__(cls, url=None):
+        configured = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI")
+        direct = url == "mongodb" or (url and url.startswith(("mongodb://", "mongodb+srv://")))
+        if direct or (not url and configured and os.getenv("MESSENGER_TRANSPORT") != "websocket"):
+            from frontend.Connection.mongo_client import MongoMessengerClient
+            return MongoMessengerClient(url if url and url != "mongodb" else None)
+        return super().__new__(cls)
+
     def __init__(self, url=None):
         self.url = (url or os.getenv("MESSENGER_SERVER_URL") or "ws://localhost:8765").strip()
         self._socket = None
