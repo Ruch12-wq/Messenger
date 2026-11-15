@@ -1,9 +1,9 @@
 """The main messenger window shown after a successful login."""
+from queue import Empty
 from tkinter import END, Text, Toplevel
 from tkinter import ttk
 
-from frontend.Connection.message_comm.recieve_message import ReceiveMessage
-from frontend.Connection.message_comm.send_message import SendMessage
+from frontend.Connection.message_comm.worker import MessageWorker
 
 
 class MessengerInterface:
@@ -36,12 +36,13 @@ class MessengerInterface:
         self.message_entry = ttk.Entry(composer)
         self.message_entry.pack(side="left", expand=True, fill="x")
         self.message_entry.bind("<Return>", self.send)
-        ttk.Button(composer, text="Send", command=self.send).pack(side="left", padx=(8, 0))
+        self.send_button = ttk.Button(composer, text="Send", command=self.send)
+        self.send_button.pack(side="left", padx=(8, 0))
         self.status = ttk.Label(outer, text="")
         self.status.pack(anchor="w", pady=(8, 0))
 
-        self.sender = SendMessage(login.server_client)
-        self.receiver = ReceiveMessage(login.server_client)
+        self.sending = False
+        self.worker = MessageWorker(login)
         if login.private_key is None:
             self.status.configure(
                 text="Private key is not available on this device; incoming messages cannot be decrypted."
@@ -64,32 +65,45 @@ class MessengerInterface:
         if self.login.private_key is None:
             self.status.configure(text="This device does not have your private key.")
             return "break"
-        try:
-            result = self.sender.message_to_db(self.login, recipient, message)
-        except Exception:
-            self.status.configure(text="Cannot send the message. Check the server connection.")
+        if self.sending:
             return "break"
-        if result[1]:
-            self.append(f"You → {recipient}: {message}")
-            self.message_entry.delete(0, END)
-        self.status.configure(text=result[0])
+        self.sending = True
+        self.send_button.configure(state="disabled")
+        self.status.configure(text="Sending…")
+        self.worker.send(recipient, message)
         return "break"
 
     def poll_messages(self):
-        try:
-            if self.login.private_key is not None:
-                result = self.receiver.next_message(self.login.private_key, timeout=0)
-                if result is not None:
-                    if result[-1]:
-                        self.append(f"{result[0]}: {result[1]}")
-                    else:
-                        self.status.configure(text=result[0])
-        except Exception:
-            self.status.configure(text="Connection to the server was lost.")
-        if self.window.winfo_exists():
-            self.window.after(250, self.poll_messages)
+        # Only the main Tkinter thread touches widgets. Drain all available
+        # events so a burst of messages doesn't wait one timer tick per item.
+        while True:
+            try:
+                event = self.worker.events.get_nowait()
+            except Empty:
+                break
+            if event[0] == "sent":
+                _, recipient, message, result = event
+                self.sending = False
+                self.send_button.configure(state="normal")
+                if result[1]:
+                    self.append(f"You → {recipient}: {message}")
+                    if self.message_entry.get().strip() == message:
+                        self.message_entry.delete(0, END)
+                self.status.configure(text=result[0])
+            elif event[0] == "received":
+                result = event[1]
+                if result[-1]:
+                    self.append(f"{result[0]}: {result[1]}")
+                else:
+                    self.status.configure(text=result[0])
+            else:
+                self.sending = False
+                self.send_button.configure(state="disabled")
+                self.status.configure(text=event[1])
+        self.poll_id = self.window.after(50, self.poll_messages)
 
     def close(self):
-        self.login.server_client.close()
+        self.window.after_cancel(self.poll_id)
+        self.worker.close()
         self.window.destroy()
         self.login_root.deiconify()
