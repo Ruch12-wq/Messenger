@@ -5,7 +5,7 @@ class Colors:
         "BUTTON": "#83b7f1",
         "BUTTON_HOVER": "#a7cdf6",
         "ERROR_TEXT": "#F80000",
-    },
+    }
     Light = {
         "BACKGROUND": "#f0f0f0",
         "TEXT": "#333333",

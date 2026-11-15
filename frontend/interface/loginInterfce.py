@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from tkinter import Tk
+from tkinter import Label, Tk
 from tkinter import ttk
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -9,6 +9,7 @@ from frontend.Connection.login_and_register.login import UserLogin
 from frontend.interface.RegisterInterface import RegisterInterface
 from frontend.Connection.server_client import MessengerServerClient
 from frontend.interface.background import run_background
+from frontend.interface.colors import Colors
 
 class LoginInterface:
     def __init__(self):
@@ -16,11 +17,18 @@ class LoginInterface:
         self.root.title("Log in")
         self.root.geometry("480x520")
         self.root.resizable(False, False)
+        
 
         form = ttk.Frame(self.root, padding=32)
         form.pack(expand=True, fill="both")
 
-        ttk.Label(form, text="Log in", font=("Arial", 20, "bold")).pack(pady=(8, 24))
+        Label(
+            form,
+            text="Log in",
+            font=("Arial", 20, "bold"),
+            background=Colors.Dark["BACKGROUND"],
+            foreground=Colors.Dark["TEXT"],
+        ).pack(pady=(8, 24))
         ttk.Label(form, text="Connection (mongodb uses MONGO_URI from .env)").pack(anchor="w")
         self.server_entry = ttk.Entry(form)
         self.server_entry.insert(0, MessengerServerClient().url)
