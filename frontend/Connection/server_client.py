@@ -7,12 +7,15 @@ messages as well as messages queued by the server while the user was offline.
 """
 import json
 import os
+import time
+from collections import deque
+from pathlib import Path
 
 from dotenv import load_dotenv
-from websockets.exceptions import ConnectionClosed
+from websockets.exceptions import ConnectionClosed, InvalidHandshake, InvalidURI
 from websockets.sync.client import connect
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 class ServerConnectionError(ConnectionError):
@@ -21,9 +24,9 @@ class ServerConnectionError(ConnectionError):
 
 class MessengerServerClient:
     def __init__(self, url=None):
-        self.url = url or os.getenv("MESSENGER_SERVER_URL", "ws://localhost:8765")
+        self.url = (url or os.getenv("MESSENGER_SERVER_URL") or "ws://localhost:8765").strip()
         self._socket = None
-        self._pending_messages = []
+        self._pending_messages = deque()
 
     @property
     def connected(self):
@@ -33,9 +36,10 @@ class MessengerServerClient:
         if self._socket is None:
             try:
                 self._socket = connect(self.url, open_timeout=10)
-            except OSError as exc:
+            except (OSError, InvalidHandshake, InvalidURI) as exc:
                 raise ServerConnectionError(
-                    f"Could not connect to the messenger server at {self.url}."
+                    f"Cannot connect to {self.url}. Check the server address and network. "
+                    "On another laptop, localhost points to that laptop; use the server computer’s IP address."
                 ) from exc
         return self
 
@@ -67,8 +71,13 @@ class MessengerServerClient:
             self.close()
             raise ServerConnectionError("The messenger server connection was closed.") from exc
 
+        deadline = time.monotonic() + 15
         while True:
-            response = self._receive()
+            try:
+                response = self._receive(max(0, deadline - time.monotonic()))
+            except TimeoutError as exc:
+                self.close()
+                raise ServerConnectionError("The server did not respond within 15 seconds. Try again.") from exc
             if response.get("type") == "new_message":
                 self._pending_messages.append(response)
                 continue
@@ -95,7 +104,7 @@ class MessengerServerClient:
     def receive_message(self, timeout=None):
         """Return the next server-delivered encrypted message, or ``None`` on timeout."""
         if self._pending_messages:
-            return self._pending_messages.pop(0)
+            return self._pending_messages.popleft()
         try:
             while True:
                 response = self._receive(timeout)

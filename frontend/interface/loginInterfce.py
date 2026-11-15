@@ -7,19 +7,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from frontend.Connection.login_and_register.login import UserLogin
 from frontend.interface.RegisterInterface import RegisterInterface
-from frontend.interface.colors import Colors
+from frontend.Connection.server_client import MessengerServerClient
+from frontend.interface.background import run_background
 
 class LoginInterface:
     def __init__(self):
         self.root = Tk()
         self.root.title("Log in")
-        self.root.geometry("420x380")
+        self.root.geometry("480x520")
         self.root.resizable(False, False)
 
         form = ttk.Frame(self.root, padding=32)
         form.pack(expand=True, fill="both")
 
         ttk.Label(form, text="Log in", font=("Arial", 20, "bold")).pack(pady=(8, 24))
+        ttk.Label(form, text="Server (ws://IP:8765 or wss://domain)").pack(anchor="w")
+        self.server_entry = ttk.Entry(form)
+        self.server_entry.insert(0, MessengerServerClient().url)
+        self.server_entry.pack(fill="x", pady=(4, 14))
+
         ttk.Label(form, text="Username").pack(anchor="w")
         self.username_entry = ttk.Entry(form, width=38)
         self.username_entry.pack(fill="x", pady=(4, 14))
@@ -28,8 +34,10 @@ class LoginInterface:
         self.password_entry = ttk.Entry(form, width=38, show="*")
         self.password_entry.pack(fill="x", pady=(4, 18))
 
-        ttk.Button(form, text="Log in", command=self.log_in).pack(anchor="e")
-        self.status = ttk.Label(form, text="")
+        self.login_button = ttk.Button(form, text="Log in", command=self.log_in)
+        self.login_button.pack(anchor="e")
+        self.busy = False
+        self.status = ttk.Label(form, text="", wraplength=410)
         self.status.pack(pady=(12, 0))
         self.login = None
         self.register_window = None
@@ -43,33 +51,44 @@ class LoginInterface:
         )
 
     def open_register_window(self):
+        if self.busy:
+            return
         if self.register_window is not None and self.register_window.window.winfo_exists():
             self.register_window.window.focus_set()
             return
-        self.register_window = RegisterInterface(self.root, self._registration_finished)
+        self.register_window = RegisterInterface(self.root, self._registration_finished, self.server_entry.get().strip())
 
     def _registration_finished(self, message):
         self.status.configure(text=message)
         self.register_window = None
 
     def log_in(self):
+        if self.busy:
+            return
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
         if not username or not password:
             self.status.configure(text="Enter your username and password.")
             return
-        try:
-            if self.login is None:
-                self.login = UserLogin()
-            usercheck = self.login.login_user(username, password)
-        except Exception:
-            self.status.configure(
-                text="Cannot connect to the login service. Check your database credentials."
-            )
+        self.busy = True
+        self.login_button.configure(state="disabled")
+        self.status.configure(text="Connecting…")
+        # A fresh connection also allows retrying after the server was restarted.
+        if self.login is not None:
+            self.login.server_client.close()
+        self.login = UserLogin(MessengerServerClient(self.server_entry.get().strip()))
+        run_background(self.root, lambda: self.login.login_user(username, password), self._login_finished)
+
+    def _login_finished(self, usercheck, error):
+        self.busy = False
+        self.login_button.configure(state="normal")
+        if error is not None:
+            self.login.server_client.close()
+            self.status.configure(text=str(error))
             return
 
         if usercheck[1]:
-            self.status.configure(text=f"Successfully logged in as '{username}'")
+            self.status.configure(text=f"Successfully logged in as '{self.login.username}'")
             from frontend.interface.intterface import MessengerInterface
 
             MessengerInterface(self.root, self.login)

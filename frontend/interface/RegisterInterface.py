@@ -3,10 +3,14 @@ from tkinter import Toplevel
 from tkinter import ttk
 
 from frontend.Connection.login_and_register.register import UserLoginRegister
+from frontend.Connection.server_client import MessengerServerClient
+from frontend.interface.background import run_background
 
 
 class RegisterInterface:
-    def __init__(self, parent, on_finished=None):
+    def __init__(self, parent, on_finished=None, server_url=None):
+        self.server_url = server_url
+        self.busy = False
         self.on_finished = on_finished
         self.window = Toplevel(parent)
         self.window.title("Register")
@@ -41,6 +45,8 @@ class RegisterInterface:
         self.username_entry.focus_set()
 
     def close(self):
+        if self.busy:
+            return
         if self.registration is not None:
             self.registration.server_client.close()
         self.window.destroy()
@@ -48,6 +54,8 @@ class RegisterInterface:
             self.on_finished("")
 
     def register(self):
+        if self.busy:
+            return
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
         confirmation = self.confirm_password_entry.get()
@@ -61,12 +69,21 @@ class RegisterInterface:
             self.status.configure(text="The passwords do not match.")
             return
 
-        try:
-            if self.registration is None:
-                self.registration = UserLoginRegister()
-            result = self.registration.register_user(username, password)
-        except Exception:
-            self.status.configure(text="Cannot connect to the registration service.")
+        if self.registration is None:
+            self.registration = UserLoginRegister(MessengerServerClient(self.server_url))
+        self.busy = True
+        self.register_button.configure(state="disabled")
+        self.status.configure(text="Registering…")
+        run_background(self.window,
+                       lambda: self.registration.register_user(username, password),
+                       self._registration_finished)
+
+    def _registration_finished(self, result, error):
+        self.busy = False
+        self.register_button.configure(state="normal")
+        if error is not None:
+            self.registration.server_client.close()
+            self.status.configure(text=str(error))
             return
 
         if result[1]:

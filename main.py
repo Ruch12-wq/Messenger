@@ -1,5 +1,6 @@
 """Install dependencies in an isolated environment and launch Messenger."""
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import socket
@@ -25,11 +26,21 @@ def prepare(component):
         print("Створення віртуального середовища…", flush=True)
         venv.EnvBuilder(with_pip=True).create(ENV)
     requirements = ROOT / "requirements.txt" if component == "all" else ROOT / component / "requirements.txt"
+    # Include nested requirement files and interpreter identity in the cache.
+    digest = hashlib.sha256()
+    for path in (ROOT / "requirements.txt", ROOT / "frontend/requirements.txt", ROOT / "backend/requirements.txt", ENV / "pyvenv.cfg"):
+        digest.update(path.read_bytes())
+    digest.update(component.encode())
+    fingerprint = digest.hexdigest()
+    marker = ENV / f".dependencies-{component}"
+    if marker.is_file() and marker.read_text() == fingerprint:
+        return
     print("Перевірка та встановлення залежностей…", flush=True)
     subprocess.run(
         [str(PYTHON), "-m", "pip", "install", "-r", str(requirements)],
         cwd=ROOT, check=True,
     )
+    marker.write_text(fingerprint)
 
 
 def stop(process):
