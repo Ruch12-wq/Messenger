@@ -9,7 +9,7 @@ class SendMessage:
     def __init__(self, server_client=None):
         self.server_client = server_client or MessengerServerClient()
 
-    def message_to_db(self, sender, recipient, message):
+    def message_to_db(self, sender, recipient, message, message_id=None):
         """Compatibility name; messages now go to the server, never MongoDB directly."""
         key_response = self.server_client.public_key_for(recipient)
         if key_response.get("type") == "error":
@@ -21,9 +21,11 @@ class SendMessage:
         except (AttributeError, KeyError, TypeError, ValueError):
             return ["Could not encrypt the message for that recipient.", False]
 
-        response = self.server_client.send_ciphertext(
-            recipient, base64.b64encode(ciphertext).decode("ascii")
-        )
+        encoded = base64.b64encode(ciphertext).decode("ascii")
+        if message_id is not None and hasattr(self.server_client, "history_updates"):
+            response = self.server_client.send_ciphertext(recipient, encoded, message_id)
+        else:
+            response = self.server_client.send_ciphertext(recipient, encoded)
         if response.get("type") == "sent":
             return [f"Message sent to '{recipient}'", True]
         return [response.get("message", "The server could not send the message."), False]

@@ -6,6 +6,9 @@ import os
 import re
 import secrets
 import time
+import uuid
+from datetime import datetime, timezone
+from bson import ObjectId
 from collections import deque
 
 import certifi
@@ -52,6 +55,8 @@ class MongoMessengerClient:
             self.messages = db[os.getenv("MONGO_COLLECTION_MESSAGES", "messages")]
             self.users.create_index("username", unique=True)
             self.messages.create_index([("recipient", 1), ("delivered", 1), ("time", 1)])
+            self.messages.create_index([("sender", 1), ("updated_at", 1)])
+            self.messages.create_index([("recipient", 1), ("updated_at", 1)])
         except (PyMongoError, ValueError):
             self.close()
             # Don't expose credentials embedded in a MongoDB URI.
@@ -119,15 +124,46 @@ class MongoMessengerClient:
             self.keys[name] = record["public_key"]
         return {"type": "key", "user": name, "public_key": self.keys[name]}
 
-    def send_ciphertext(self, recipient, ciphertext):
+    def send_ciphertext(self, recipient, ciphertext, message_id=None):
         key = self.public_key_for(recipient)
         if key["type"] == "error":
             return key
         if not isinstance(ciphertext, str) or not ciphertext or len(ciphertext) > 200_000:
             return self.error("Invalid message.")
-        self.messages.insert_one(dict(sender=self.user, recipient=key["user"],
-                                      ciphertext=ciphertext, time=time.time(), delivered=False))
-        return {"type": "sent", "delivered": False}
+        message_id = message_id or str(uuid.uuid4())
+        self.messages.update_one(
+            {"_id": message_id},
+            {"$setOnInsert": dict(sender=self.user, recipient=key["user"],
+                                  ciphertext=ciphertext, time=time.time(), delivered=False, read=False),
+             "$currentDate": {"updated_at": True}}, upsert=True)
+        return {"type": "sent", "id": message_id, "delivered": False}
+
+    def verify_password(self, password):
+        record = self.users.find_one({"username": self.user})
+        return bool(record and 16 <= len(password) <= 256 and hmac.compare_digest(
+            hash_secret(password, bytes.fromhex(record["salt"])).hex(), record["hash"]))
+
+    def history_updates(self, since=None):
+        if not self.user:
+            raise ConnectionError("Please log in first.")
+        query = {"$or": [{"sender": self.user}, {"recipient": self.user}]}
+        if since is not None:
+            query = {"$and": [query, {"updated_at": {"$gte": since}}]}
+        return list(self.messages.find(query).sort([("time", 1), ("_id", 1)]))
+
+    def acknowledge(self, ids, read=False):
+        identifiers = []
+        for value in ids:
+            identifiers.append(value)
+            if ObjectId.is_valid(value):
+                identifiers.append(ObjectId(value))
+        fields = {"delivered": True}
+        if read:
+            fields["read"] = True
+        self.messages.update_many(
+            {"_id": {"$in": identifiers}, "recipient": self.user,
+             ("read" if read else "delivered"): {"$ne": True}},
+            {"$set": fields, "$currentDate": {"updated_at": True}})
 
     def receive_message(self, timeout=None):
         if not self.user:
