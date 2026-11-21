@@ -26,8 +26,8 @@ class LoginInterface:
             form,
             text="Log in",
             font=("Arial", 20, "bold"),
-            background=Colors.Dark["BACKGROUND"],
-            foreground=Colors.Dark["TEXT"],
+            background=Colors.Light["BACKGROUND"],
+            foreground=Colors.Light["TEXT"],
         ).pack(pady=(8, 24))
         ttk.Label(form, text="Connection (mongodb uses MONGO_URI from .env)").pack(anchor="w")
         self.server_entry = ttk.Entry(form)

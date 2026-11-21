@@ -29,7 +29,7 @@ class RegisterInterface:
         self.username_entry = ttk.Entry(form, width=38)
         self.username_entry.pack(fill="x", pady=(4, 12))
 
-        ttk.Label(form, text="Password (at least 16 characters)").pack(anchor="w")
+        ttk.Label(form, text="Password (at least 6 characters)").pack(anchor="w")
         self.password_entry = ttk.Entry(form, width=38, show="*")
         self.password_entry.pack(fill="x", pady=(4, 12))
 
@@ -62,8 +62,8 @@ class RegisterInterface:
         if not username or not password:
             self.status.configure(text="Enter a username and password.")
             return
-        if len(password) < 16:
-            self.status.configure(text="The password must be at least 16 characters long.")
+        if len(password) < 6:
+            self.status.configure(text="The password must be at least 6 characters long.")
             return
         if password != confirmation:
             self.status.configure(text="The passwords do not match.")
