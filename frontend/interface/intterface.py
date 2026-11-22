@@ -19,7 +19,7 @@ class MessengerInterface:
         self.login_root.withdraw()
 
         outer = ttk.Frame(self.window, padding=16)
-        outer.pack(expand=True, fill="both")
+        outer.pack(expand=True, fill="both", padx=(200, 0))
         header = ttk.Frame(outer)
         header.pack(fill="x")
         ttk.Label(header, text=f"Logged in as {login.username}", font=("Arial", 12, "bold")).pack(
@@ -173,6 +173,11 @@ class MessengerInterface:
         account_password = simpledialog.askstring("Імпорт ключа", "Ваш поточний пароль входу (для збереження ключа на цьому пристрої):", show="*", parent=self.window)
         if account_password:
             self.worker.commands.put(("import", source, password, account_password))
+
+    def settingd(self):
+        from frontend.interface.Setting import SettingInterface
+        
+
 
     def close(self):
         self.window.after_cancel(self.poll_id)

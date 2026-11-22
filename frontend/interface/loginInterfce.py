@@ -42,21 +42,25 @@ class LoginInterface:
         self.password_entry = ttk.Entry(form, width=38, show="*")
         self.password_entry.pack(fill="x", pady=(4, 18))
 
-        self.login_button = ttk.Button(form, text="Log in", command=self.log_in)
-        self.login_button.pack(anchor="e")
+        actions = ttk.Frame(form)
+        actions.pack(fill="x")
+        actions.columnconfigure(0, weight=1, uniform="login-actions")
+        actions.columnconfigure(1, weight=1, uniform="login-actions")
+
+        self.login_button = ttk.Button(actions, text="Log in", command=self.log_in)
+        self.login_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+        self.register_button = ttk.Button(
+            actions,
+            text="Register",
+            command=self.open_register_window,
+        )
+        self.register_button.grid(row=0, column=1, sticky="ew", padx=(4, 0))
+
         self.busy = False
         self.status = ttk.Label(form, text="", wraplength=410)
         self.status.pack(pady=(12, 0))
         self.login = None
         self.register_window = None
-        ttk.Button(
-            form,
-            text="Register",
-            command=self.open_register_window,
-            padding=(0, 8),
-        ).pack(
-            anchor="w", pady=(8, 0)
-        )
 
     def open_register_window(self):
         if self.busy:
