@@ -10,6 +10,7 @@ from frontend.interface.RegisterInterface import RegisterInterface
 from frontend.Connection.server_client import MessengerServerClient
 from frontend.interface.background import run_background
 from frontend.interface.colors import Colors
+from frontend.translation.languages import Language
 
 class LoginInterface:
     def __init__(self):
