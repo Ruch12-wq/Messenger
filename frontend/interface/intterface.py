@@ -174,9 +174,13 @@ class MessengerInterface:
         if account_password:
             self.worker.commands.put(("import", source, password, account_password))
 
-    def settingd(self):
+    def settings(self):
         from frontend.interface.Setting import SettingInterface
+        SettingInterface(self.window, self.login)
         
+
+
+
 
 
     def close(self):
