@@ -58,6 +58,13 @@ class MessengerInterface:
         self.message_entry.focus_set()
         self.poll_messages()
 
+
+        actions_s = ttk.Frame(outer, width=10)
+        actions_s.pack(fill="x")
+        self.setting_button = ttk.Button(actions_s, text="Settings", command=self.settings)
+        self.setting_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
+
+
     def append(self, text):
         self.history.configure(state="normal")
         self.history.insert(END, text + "\n")
@@ -176,11 +183,7 @@ class MessengerInterface:
 
     def settings(self):
         from frontend.interface.Setting import SettingInterface
-        SettingInterface(self.window, self.login)
-        
-
-
-
+        self.setting_window = SettingInterface(self.window, self.login)
 
 
     def close(self):

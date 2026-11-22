@@ -9,4 +9,13 @@ class SettingInterface:
         self.window.title(f"Setting — {login.username}")
         self.window.geometry("500x700")
         self.window.minsize(500, 700)
-        
+
+    outer = ttk.Frame(padding=10)
+    outer.pack(expand=True, fill="both")
+    header = ttk.Frame(outer)
+    header.pack(fill="x")
+
+    
+
+    def close(self):
+        self.window.destroy()
